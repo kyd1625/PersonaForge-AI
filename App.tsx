@@ -4,6 +4,10 @@ import { PersonaConfig, Language, ChatMessage, ChatSession, PersonaTemplate, Pag
 import { TRANSLATIONS, TEMPLATES, EXPERT_TEMPLATES } from './constants';
 import { generatePersonaPrompt, sendMessageToPersona } from './services/geminiService';
 import LanguageSelector from './components/LanguageSelector';
+// @ts-ignore
+import ReactMarkdown from 'react-markdown';
+// @ts-ignore
+import remarkGfm from 'remark-gfm';
 
 const App: React.FC = () => {
   const [lang, setLang] = useState<Language>('ko');
@@ -18,7 +22,6 @@ const App: React.FC = () => {
   const [showPayment, setShowPayment] = useState<{amt: number; label: string} | null>(null);
   const [isPaying, setIsPaying] = useState(false);
   
-  // Auth Form State
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [authForm, setAuthForm] = useState({ email: '', password: '', name: '' });
 
@@ -52,14 +55,12 @@ const App: React.FC = () => {
     }
   }, [activeSession?.messages, isTyping, activePage]);
 
-  // Auth Handlers
   const handleAuth = (e: React.FormEvent) => {
     e.preventDefault();
     if (authMode === 'signup') {
       const newUser = { id: Date.now().toString(), name: authForm.name, email: authForm.email, tokens: 100 };
       setUser(newUser);
     } else {
-      // Mock Login
       setUser({ id: 'mock-id', name: 'User', email: authForm.email, tokens: 100 });
     }
     setActivePage('dashboard');
@@ -158,7 +159,6 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-slate-950 text-slate-100 font-sans">
       
-      {/* Sidebar - Desktop */}
       <nav className="hidden md:flex fixed left-0 top-0 bottom-0 w-20 lg:w-64 bg-slate-900 border-r border-slate-800 flex-col py-10 px-4 z-50">
         <div className="flex items-center gap-3 px-3 mb-14 cursor-pointer" onClick={() => setActivePage('dashboard')}>
           <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-600/30 shrink-0">
@@ -198,13 +198,11 @@ const App: React.FC = () => {
         )}
       </nav>
 
-      {/* Main Content */}
       <main className="flex-1 md:ml-20 lg:ml-64 pb-24 md:pb-12 p-5 md:p-10 lg:p-14 overflow-x-hidden transition-all">
         
-        {/* Auth Page */}
         {activePage === 'auth' && (
             <div className="min-h-[80vh] flex items-center justify-center p-4 animate-in fade-in zoom-in-95 duration-500">
-                <div className="w-full max-w-md glass-effect p-8 md:p-10 rounded-[2.5rem] border border-slate-800 shadow-2xl">
+                <div className="w-full max-md glass-effect p-8 md:p-10 rounded-[2.5rem] border border-slate-800 shadow-2xl">
                     <div className="text-center mb-8">
                         <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-2xl shadow-indigo-600/40 mx-auto mb-6">
                             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg>
@@ -242,7 +240,6 @@ const App: React.FC = () => {
             </div>
         )}
 
-        {/* Guest Guard */}
         {!user && activePage !== 'auth' && activePage !== 'store' && (
             <div className="min-h-[60vh] flex flex-col items-center justify-center p-8 animate-in fade-in duration-500">
                 <div className="w-20 h-20 bg-slate-900 border border-slate-800 rounded-full flex items-center justify-center mb-6 text-slate-500">
@@ -299,7 +296,7 @@ const App: React.FC = () => {
                 <div className="glass-effect p-8 rounded-[2rem] border-slate-800 bg-indigo-600/10 flex flex-col justify-between min-h-[220px]">
                   <div>
                     <div className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400 mb-2">{t.credits}</div>
-                    <div className="text-6xl font-black text-white">{user.tokens}</div>
+                    <div className="text-6xl font-black text-white">{user?.tokens || 0}</div>
                   </div>
                   <button onClick={() => setActivePage('store')} className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl transition-all shadow-xl shadow-indigo-600/20">{t.refill}</button>
                 </div>
@@ -421,7 +418,15 @@ const App: React.FC = () => {
                {activeSession.messages.map((m, i) => (
                  <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                    <div className={`max-w-[85%] md:max-w-[75%] p-5 rounded-3xl text-sm md:text-base leading-relaxed ${m.role === 'user' ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-600/10' : 'bg-slate-950 text-slate-200 border border-slate-800 shadow-sm'}`}>
-                     {m.text}
+                     {m.role === 'user' ? (
+                       m.text
+                     ) : (
+                       <div className="prose-custom">
+                         <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                           {m.text}
+                         </ReactMarkdown>
+                       </div>
+                     )}
                    </div>
                  </div>
                ))}
@@ -483,7 +488,6 @@ const App: React.FC = () => {
         )}
       </main>
 
-      {/* Simulated Payment Modal */}
       {showPayment && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300">
               <div className="w-full max-w-lg glass-effect p-8 md:p-10 rounded-[3rem] border border-slate-800 shadow-3xl animate-in zoom-in-95 duration-500">
@@ -533,7 +537,6 @@ const App: React.FC = () => {
           </div>
       )}
 
-      {/* Bottom Navigation - Mobile */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 h-20 bg-slate-900 border-t border-slate-800 flex items-center justify-around px-2 z-50 backdrop-blur-xl bg-opacity-95">
         {navItems.map(item => (
           <button

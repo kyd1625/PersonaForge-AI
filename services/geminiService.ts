@@ -4,7 +4,6 @@ import { PersonaConfig, ChatMessage } from "../types";
 
 // Generates a comprehensive system instruction for an AI persona based on user requirements.
 export const generatePersonaPrompt = async (config: PersonaConfig): Promise<string> => {
-  // Always use process.env.API_KEY directly in the named parameter.
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   const systemInstruction = `
@@ -16,9 +15,10 @@ export const generatePersonaPrompt = async (config: PersonaConfig): Promise<stri
     2. Incorporate specific expertise and deep knowledge bases.
     3. Define the conversational tone and communication style clearly.
     4. List specific constraints and operational guidelines.
-    5. The output should be a single, cohesive block of text that can be pasted directly into a "System Prompt" or "Instructions" field.
-    6. Ensure the instruction makes the AI behave like an elite expert in the specified field.
-    7. IMPORTANT: Output the final instruction in the requested language: ${config.language}.
+    5. IMPORTANT: Add a specific instruction to the persona: "Always format your responses using highly structured Markdown. Use headers (###) for sections, bullet points for lists, and bold text for key terms to maximize readability."
+    6. The output should be a single, cohesive block of text that can be pasted directly into a "System Prompt" field.
+    7. Ensure the instruction makes the AI behave like an elite expert in the specified field.
+    8. IMPORTANT: Output the final instruction in the requested language: ${config.language}.
   `;
 
   const userPrompt = `
@@ -36,12 +36,10 @@ export const generatePersonaPrompt = async (config: PersonaConfig): Promise<stri
       config: {
         systemInstruction: systemInstruction,
         temperature: 0.8,
-        // Gemini 3 series supports thinkingConfig.
         thinkingConfig: { thinkingBudget: 4000 }
       },
     });
 
-    // response.text is a property, not a function.
     return response.text || "Failed to generate persona. Please try again.";
   } catch (error) {
     console.error("Gemini API Error:", error);
@@ -56,10 +54,8 @@ export const sendMessageToPersona = async (
   message: string,
   onChunk: (chunk: string) => void
 ) => {
-  // Always use process.env.API_KEY directly.
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
-  // Reconstruct history in the format expected by the Gemini SDK.
   const historyMapped = history.map(m => ({
     role: m.role,
     parts: [{ text: m.text }]
@@ -68,7 +64,7 @@ export const sendMessageToPersona = async (
   const session = ai.chats.create({
     model: 'gemini-3-flash-preview',
     config: { 
-      systemInstruction,
+      systemInstruction: `${systemInstruction}\n\n[FORMATTING RULE]: You are an elite expert. Your answers must be extremely clear and well-structured. Use Markdown (### headers, lists, bolding, emojis) to organize information into digestible sections. Avoid wall-of-text responses.`,
       temperature: 0.7,
     },
     history: historyMapped
@@ -78,7 +74,6 @@ export const sendMessageToPersona = async (
   
   let fullText = "";
   for await (const chunk of responseStream) {
-    // Explicitly cast to GenerateContentResponse to access the .text property safely.
     const c = chunk as GenerateContentResponse;
     const text = c.text;
     if (text) {
